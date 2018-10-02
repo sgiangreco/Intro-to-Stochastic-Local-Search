@@ -1,0 +1,146 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+
+\title{Introduction to Stochastic Local Search}
+\author{Steven Giangreco}
+\date{October 2018}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\begin{frame}{Formal Definition of SLS}
+Given combinatorial problem $\Pi$, a stochastic local search algorithm for solving arbitrary instance $\pi \in \Pi$ is defined by the following components:
+\begin{itemize}
+    \item search space $S(\pi)$ containing finite set of candidate solutions $s \in S$,
+    \item set of feasible solutions $S'(\pi) \subseteq S(\pi)$,
+    \item neighborhood relation on $S(\pi)$ defined as $N(\pi) \subseteq S(\pi) \times S(\pi)$,
+    \item finite set of memory states $M(\pi)$,
+    \item initialization function $init(\pi): \emptyset \rightarrow D(S(\pi) \times M(\pi))$ which specifies a probability distribution over initial search spaces and memory states,
+\end{itemize}
+    
+\end{frame}
+
+\begin{frame}{Formal Definition of SLS (cont.)}
+\begin{itemize}
+    \item step function $step(\pi): S(\pi) \times M(\pi) \rightarrow D(S(\pi) \times M(\pi))$ mapping each search position and memory state onto a probability distribution over its neighboring search positions and memory states, and
+    \item termination predicate $terminate(\pi): S(\pi) \times M(\pi) \rightarrow D(\{\top, \bot\})$ mapping each search position and memory state to a probability distribution over truth values indicating probability of search terminating on reaching a certain search point in search space and memory state
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Neighborhood Relation}
+\begin{itemize}
+    \item Neighborhood relation can be defined as a function $N(s) := \{s' \in S \mid N(s, s')\} \subseteq S$ mapping each candidate solution to a set of other candidate solutions.
+    \item In SAT problems, this relation is typically $k$-exchange wherein neighbor $s'$ to candidate solution $s$ is $s$ with at most $k$ variables having flipped truth values.
+    \item For example the solution candidate $(x_1, x_2) = (\top, \top)$ has 1-exchange neighbors $(\top, \bot)$ and $(\bot, \top)$.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Iterative Improvement}
+\begin{itemize}
+    \item $\forall s \in S, init(s) := 1/\vert S \vert$
+    \item Let $I(s) := \{s' \in S \mid s' \in N(s) \mathrm{and} g(s') < g(s)\}$.  Then 
+    \[ step(s)(s') = \begin{cases}
+    1/\vert I(s) \vert & s' \in I(s) \\
+    0 & \mathrm{otherwise}
+    \end{cases}
+    \]
+    \item Always finds a local optimum
+    \item High likelihood of getting bogged down in local optimum instead of finding better solution with backtracking
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Escape Strategies}
+Approaching a local optimum without adequately low objective value is frequently-encountered problem.  Can be reduced with a couple of strategies.
+\begin{itemize}
+    \item Backtracking - Choose a non-improving step, typically involving randomness.  Choosing policy of minimally worsening steps runs risk of plateauing.
+    \item Restart - Re-initialize algorithm at a different initial solution candidate.  Best used when there are few local minima and data can be readily re-initialized.
+\end{itemize}
+\end{frame}
+
+\section{Search Methods}
+
+\begin{frame}{Variable Neighborhood Descent}
+Let $N_1, N_2, ... N_k$ be neighborhood relations ordered in increasing size.  Algorithm works as follows:
+\begin{itemize}
+    \item Find local optimum of $N_1$.
+    \item Continue search for improvement in $N_2$.  If none is found, continue search in $N_3$, and so on.
+    \item If improvement is found, perform above two steps again.  If no improvement is found with $N_k$, return with local optimum as optimal value.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Randomized Iterative Improvement}
+\begin{itemize}
+    \item Let $wp \in [0, 1]$ be a parameter determining likelihood of performing random walk instead of improvement step (this is called the walk probability, or noise parameter).
+    \item $step(s)(s') := wp \cdot step_{URW}(s)(s') + (1-wp) \cdot step_{II}(s)(s')$ where $step_{URW}(s)(s')$ is step function for uninformed random walk and $step_{II}(s)(s')$ is step function for iterative improvement (where least worsening step is chosen if set of strictly improving neighbors $I(s) = \emptyset$).
+    \item Terminates after certain amount of time or steps, or after certain amount of steps without improvement.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Probabilistic Iterative Improvement}
+\begin{itemize}
+    \item The more a step would worsen the evaluation function at current position, the less likely it is to be performed
+    \item $step(s)(s') = p(g, s)(s')$ where $p(g, s)$ is probability distribution function over neighboring candidate solutions of $s$ depending on their evaluation function values.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Tabu Search}
+\begin{itemize}
+    \item Focus shifts to using search history instead of probabilistically worsening steps to escape local optimum.
+    \item Typical restrictions are search positions visited or solution components used.
+    \item Introduces parameter $tt$ (called tabu tenure) indicating how long restrictions are memorized.
+    \item Too small $tt$ and search will stagnate; too large $tt$ and search path may be too restricted.
+    \item Aspiration criteria are conditions under which the restrictions may be lifted; often include an improvement in the incumbent candidate solution.
+%    \item Simple tabu search uses best improvement strategy with least worsening steps when at local optimum.  Steps to recently-visited positions are forbidden
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Iterated Local Search}
+\begin{itemize}
+    \item Steps alternate between approaching local optimum and escaping it.
+    \item First step perturbs current candidate solution $s$, yielding $s'$.
+    \item Second step finds the local optimum $s''$ of $s'$.
+    \item Third step compares $s$ and $s''$, starts again with better solution.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Greedy Randomized Adaptive Search Procedure (GRASP)}
+\begin{itemize}
+    \item Attempts to overcome limited candidate solution pool offered by greedy construction searches (which always add best improvement) by randomizing construction method.
+    \item Randomly chooses solution component to add from list of highly-ranked components (called restricted candidate list, or RCL).
+    \item RCL may be decided by value cutoff or cardinality restriction
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Adaptive Iterated Construction Search}
+\begin{itemize}
+    \item Like GRASP, but weights are adapted to candidate solutions depending on their solution components and quality.
+    \item The weights and a heuristic function $h$ are used to probabilistically select components to be added to the candidate solution.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Ant Colony Optimization}
+\begin{itemize}
+    \item Multiple instances of the solver are run (called agents).
+    \item Agents are able to communicate indirectly with "pheromone trails".
+    \item At start of each iteration, a population of candidate solutions $sp$ is generated with constructive search procedure.
+    \item Solving works like adaptive iterated construction search, but pheromone trail levels are used instead of weights when adding solution components to partial candidate solutions.
+    \item Perturbative local search may be applied to each element of $sp$, yielding set of locally optimum candidate solutions $sp'$.
+    \item Best candidate solution in $sp'$ is chosen to be incumbent candidate solution.
+    \item Pheromone trail levels for solution components are updated.
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Evolutionary Algorithms}
+\begin{itemize}
+    \item More direct interaction between agents than found in ant colony optimization.
+    \item Three genetic operators (selection, mutation, recombination) replace a set of candidate solutions with a new set after each iteration (usually called a generation).
+    \item Selection operator chooses (probabilistically) which candidate solutions to receive mutation and/or recombination or be added to the next generation.
+    \item Mutation operator performs small, random change to a candidate solution.
+    \item Recombination operator combines some information from multiple candidate solutions (called parents) to produce new candidate solution(s) (called offspring).
+\end{itemize}
+\end{frame}
+\end{document}
